@@ -1,0 +1,67 @@
+
+import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.widget.Toast
+import com.example.neerajgooglesignin.databinding.ActivityMainBinding
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+
+class MainActivity : AppCompatActivity() {
+    private lateinit var binding:ActivityMainBinding
+    private lateinit var googleSignInClient : GoogleSignInClient
+    companion object{
+        lateinit var firebase : FirebaseAuth
+    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding=ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        supportActionBar?.hide()
+
+        val gso=GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken("79958011856-luh6d23gfj734letntiqcae5405ei87f.apps.googleusercontent.com")
+            .requestEmail()
+            .build()
+
+        val googleSignInClient=GoogleSignIn.getClient(this,gso)
+        
+        firebase = FirebaseAuth.getInstance()
+        if(firebase.currentUser==null){
+            startActivity(Intent(this,MainActivity::class.java))
+            finish()
+        }
+        
+        binding.googleimage.setOnClickListener{
+            googleSignInClient.signOut()
+            startActivityForResult(googleSignInClient.signInIntent,13)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if(requestCode==13 && resultCode== RESULT_OK){
+            val task=GoogleSignIn.getSignedInAccountFromIntent(data)
+            val account=task.getResult(ApiException::class.java)
+            firebaseAuthWithGoogle(account.idToken!!)
+        }
+    }
+    private fun firebaseAuthWithGoogle(idToken:String){
+        val credential =GoogleAuthProvider.getCredential(idToken,null)
+        firebase.signInWithCredential(credential)
+            .addOnCompleteListener(this){ task ->
+                if(task.isSuccessful){
+                    startActivity(Intent(this,thirdactivity::class.java))
+                    finish()
+                }
+            }.addOnFailureListener{
+                Toast.makeText(this,it.localizedMessage,Toast.LENGTH_LONG).show()
+            }
+    }
+
+}
